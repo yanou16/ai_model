@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prédiction d'Attrition - AttritionAI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            opacity: 0.1;
+            z-index: 0;
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(102, 126, 234, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(102, 126, 234, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .back-link {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: #ffffff;
+        }
+
+        .container {
+            position: relative;
+            max-width: 1000px;
+            margin: 100px auto 50px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 50px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+
+        h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .section-title {
+            color: #667eea;
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .section-subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            font-size: 16px;
+            color: #ffffff;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        select option {
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 30px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 40px;
+            padding: 40px;
+            border-radius: 20px;
+            display: none;
+            backdrop-filter: blur(20px);
+        }
+
+        .result.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result.positive {
+            background: rgba(40, 167, 69, 0.15);
+            border: 2px solid rgba(40, 167, 69, 0.5);
+        }
+
+        .result.negative {
+            background: rgba(220, 53, 69, 0.15);
+            border: 2px solid rgba(220, 53, 69, 0.5);
+        }
+
+        .result-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .result.positive .result-title {
+            color: #28a745;
+        }
+
+        .result.negative .result-title {
+            color: #dc3545;
+        }
+
+        .probability {
+            font-size: 56px;
+            font-weight: 800;
+            margin: 25px 0;
+        }
+
+        .recommendations {
+            margin-top: 30px;
+        }
+
+        .recommendations h3 {
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 700;
+        }
+
+        .recommendations ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .recommendations li {
+            margin-bottom: 12px;
+            padding-left: 25px;
+            position: relative;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .recommendations li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .error {
+            background: rgba(220, 53, 69, 0.15);
+            border: 2px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 30px 20px;
+                margin: 80px 10px 30px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            nav {
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-grid"></div>
+
+    <nav>
+        <a href="index.html" class="logo">AttritionAI</a>
+        <a href="index.html" class="back-link">← Retour à l'accueil</a>
+    </nav>
+
+    <div class="container">
+        <h1>🎯 Prédiction d'Attrition</h1>
+        <p class="subtitle">Entrez les informations de l'employé pour obtenir une prédiction précise</p>
+
+        <form id="predictionForm">
+            <!-- Informations Démographiques -->
+            <h2 class="section-title">👤 Informations Démographiques</h2>
+            <div class="row">
+                <div class="form-group">
+                    <label for="Age">Âge</label>
+                    <input type="number" id="Age" name="Age" required min="18" max="70" value="35">
+                </div>
+                <div class="form-group">
+                    <label for="Gender">Genre</label>
+                    <select id="Gender" name="Gender" required>
+                        <option value="Male">Homme</option>
+                        <option value="Female">Femme</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="MaritalStatus">Statut Marital</label>
+                    <select id="MaritalStatus" name="MaritalStatus" required>
+                        <option value="Single">Célibataire</option>
+                        <option value="Married" selected>Marié(e)</option>
+                        <option value="Divorced">Divorcé(e)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="DistanceFromHome">Distance du domicile (km)</label>
+                    <input type="number" id="DistanceFromHome" name="DistanceFromHome" required min="0" value="10">
+                </div>
+            </div>
+
+            <!-- Éducation -->
+            <h2 class="section-title">🎓 Éducation</h2>
+            <div class="row">
+                <div class="form-group">
+                    <label for="Education">Niveau d'éducation</label>
+                    <select id="Education" name="Education" required>
+                        <option value="1">1 - Below College</option>
+                        <option value="2">2 - College</option>
+                        <option value="3" selected>3 - Bachelor</option>
+                        <option value="4">4 - Master</option>
+                        <option value="5">5 - Doctor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="EducationField">Domaine d'études</label>
+                    <select id="EducationField" name="EducationField" required>
+                        <option value="Life Sciences" selected>Life Sciences</option>
+                        <option value="Medical">Medical</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Technical Degree">Technical Degree</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Informations Professionnelles -->
+            <h2 class="section-title">💼 Informations Professionnelles</h2>
+            <div class="row">
+                <div class="form-group">
+                    <label for="Department">Département</label>
+                    <select id="Department" name="Department" required>
+                        <option value="Sales">Sales</option>
+                        <option value="Research & Development" selected>Research & Development</option>
+                        <option value="Human Resources">Human Resources</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="JobRole">Poste</label>
+                    <input type="text" id="JobRole" name="JobRole" required value="Research Scientist">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="JobLevel">Niveau de poste (1-5)</label>
+                    <input type="number" id="JobLevel" name="JobLevel" required min="1" max="5" value="2">
+                </div>
+                <div class="form-group">
+                    <label for="MonthlyIncome">Revenu mensuel ($)</label>
+                    <input type="number" id="MonthlyIncome" name="MonthlyIncome" required min="0" value="5000">
+                </div>
+            </div>
+
+            <!-- Expérience -->
+            <h2 class="section-title">⏱️ Expérience</h2>
+            <div class="row">
+                <div class="form-group">
+                    <label for="TotalWorkingYears">Années d'expérience totales</label>
+                    <input type="number" id="TotalWorkingYears" name="TotalWorkingYears" required min="0" value="10">
+                </div>
+                <div class="form-group">
+                    <label for="YearsAtCompany">Années dans l'entreprise</label>
+                    <input type="number" id="YearsAtCompany" name="YearsAtCompany" required min="0" value="5">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="YearsWithCurrManager">Années avec le manager actuel</label>
+                    <input type="number" id="YearsWithCurrManager" name="YearsWithCurrManager" required min="0"
+                        value="3">
+                </div>
+                <div class="form-group">
+                    <label for="YearsSinceLastPromotion">Années depuis dernière promotion</label>
+                    <input type="number" id="YearsSinceLastPromotion" name="YearsSinceLastPromotion" required min="0"
+                        value="1">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="NumCompaniesWorked">Nombre d'entreprises précédentes</label>
+                    <input type="number" id="NumCompaniesWorked" name="NumCompaniesWorked" required min="0" value="2">
+                </div>
+                <div class="form-group">
+                    <label for="BusinessTravel">Voyages d'affaires</label>
+                    <select id="BusinessTravel" name="BusinessTravel" required>
+                        <option value="Non-Travel">Non-Travel</option>
+                        <option value="Travel_Rarely" selected>Travel_Rarely</option>
+                        <option value="Travel_Frequently">Travel_Frequently</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Conditions de Travail -->
+            <h2 class="section-title">🏢 Conditions de Travail</h2>
+            <div class="row">
+                <div class="form-group">
+                    <label for="PercentSalaryHike">Augmentation salariale (%)</label>
+                    <input type="number" id="PercentSalaryHike" name="PercentSalaryHike" required min="0" value="15">
+                </div>
+                <div class="form-group">
+                    <label for="StockOptionLevel">Niveau d'options d'achat (0-3)</label>
+                    <input type="number" id="StockOptionLevel" name="StockOptionLevel" required min="0" max="3"
+                        value="1">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="TrainingTimesLastYear">Formations l'année dernière</label>
+                    <input type="number" id="TrainingTimesLastYear" name="TrainingTimesLastYear" required min="0"
+                        value="3">
+                </div>
+                <div class="form-group">
+                    <label for="PerformanceRating">Évaluation de performance (3-4)</label>
+                    <input type="number" id="PerformanceRating" name="PerformanceRating" required min="3" max="4"
+                        value="3">
+                </div>
+            </div>
+
+            <!-- Satisfaction -->
+            <h2 class="section-title">😊 Satisfaction (échelle 1-4)</h2>
+            <div class="row">
+                <div class="form-group">
+                    <label for="EnvironmentSatisfaction">Satisfaction environnement</label>
+                    <input type="number" id="EnvironmentSatisfaction" name="EnvironmentSatisfaction" required min="1"
+                        max="4" value="3">
+                </div>
+                <div class="form-group">
+                    <label for="JobSatisfaction">Satisfaction du travail</label>
+                    <input type="number" id="JobSatisfaction" name="JobSatisfaction" required min="1" max="4" value="4">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="WorkLifeBalance">Équilibre vie pro/perso</label>
+                    <input type="number" id="WorkLifeBalance" name="WorkLifeBalance" required min="1" max="4" value="3">
+                </div>
+                <div class="form-group">
+                    <label for="JobInvolvement">Implication dans le travail</label>
+                    <input type="number" id="JobInvolvement" name="JobInvolvement" required min="1" max="4" value="3">
+                </div>
+            </div>
+
+            <!-- Données Temporelles -->
+            <h2 class="section-title">⏰ Données Temporelles (Optionnel)</h2>
+            <p class="section-subtitle">Ces données sont optionnelles. Des valeurs moyennes seront utilisées si non
+                renseignées.</p>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="AvgWorkingHours">Heures moyennes travaillées/jour</label>
+                    <input type="number" id="AvgWorkingHours" name="AvgWorkingHours" min="0" max="24" step="0.1"
+                        value="8.5">
+                </div>
+                <div class="form-group">
+                    <label for="LateArrivals">Nombre de retards (après 9h)</label>
+                    <input type="number" id="LateArrivals" name="LateArrivals" min="0" value="10">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="AvgOvertime">Heures supplémentaires moyennes/jour</label>
+                    <input type="number" id="AvgOvertime" name="AvgOvertime" min="0" max="10" step="0.1" value="0.5">
+                </div>
+                <div class="form-group">
+                    <label for="AbsenceRate">Taux d'absence (%)</label>
+                    <input type="number" id="AbsenceRate" name="AbsenceRate" min="0" max="100" step="0.1" value="5.0">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="WorkHoursVariance">Variance des heures (régularité)</label>
+                    <input type="number" id="WorkHoursVariance" name="WorkHoursVariance" min="0" step="0.1" value="1.0">
+                </div>
+                <div class="form-group"></div>
+            </div>
+
+            <button type="submit" id="submitBtn">🔍 Prédire l'Attrition</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyse en cours...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="result" id="result">
+            <div class="result-title" id="resultTitle"></div>
+            <div class="probability" id="probability"></div>
+            <div class="recommendations" id="recommendations"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            document.getElementById('result').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('submitBtn').disabled = true;
+
+            const formData = new FormData(e.target);
+            const data = {};
+
+            for (let [key, value] of formData.entries()) {
+                if (['Age', 'DistanceFromHome', 'Education', 'JobLevel', 'MonthlyIncome',
+                    'TotalWorkingYears', 'YearsAtCompany', 'YearsWithCurrManager',
+                    'YearsSinceLastPromotion', 'NumCompaniesWorked', 'PercentSalaryHike',
+                    'StockOptionLevel', 'TrainingTimesLastYear', 'EnvironmentSatisfaction',
+                    'JobSatisfaction', 'WorkLifeBalance', 'JobInvolvement',
+                    'PerformanceRating', 'LateArrivals'].includes(key)) {
+                    data[key] = parseInt(value);
+                } else if (['AvgWorkingHours', 'AvgOvertime', 'AbsenceRate', 'WorkHoursVariance'].includes(key)) {
+                    data[key] = parseFloat(value);
+                } else {
+                    data[key] = value;
+                }
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+
+                const result = await response.json();
+                displayResult(result);
+
+            } catch (error) {
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = `❌ Erreur: ${error.message}. Assurez-vous que l'API est démarrée (python api.py)`;
+                errorDiv.classList.add('show');
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('submitBtn').disabled = false;
+            }
+        });
+
+        function displayResult(result) {
+            const resultDiv = document.getElementById('result');
+            const resultTitle = document.getElementById('resultTitle');
+            const probability = document.getElementById('probability');
+            const recommendations = document.getElementById('recommendations');
+
+            if (result.prediction.will_leave) {
+                resultDiv.className = 'result negative show';
+                resultTitle.textContent = '⚠️ Risque d\'Attrition: OUI';
+                probability.textContent = `${result.probabilities.leave}%`;
+                probability.style.color = '#dc3545';
+            } else {
+                resultDiv.className = 'result positive show';
+                resultTitle.textContent = '✅ Risque d\'Attrition: NON';
+                probability.textContent = `${result.probabilities.stay}%`;
+                probability.style.color = '#28a745';
+            }
+
+            let recoHTML = '<h3>💡 Recommandations:</h3><ul>';
+            result.recommendations.forEach(rec => {
+                recoHTML += `<li>${rec}</li>`;
+            });
+            recoHTML += '</ul>';
+            recommendations.innerHTML = recoHTML;
+        }
+    </script>
+</body>
+
+</html>
