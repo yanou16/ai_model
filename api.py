@@ -11,6 +11,8 @@ import os
 import google.generativeai as genai
 from groq import Groq
 from dotenv import load_dotenv
+import shap
+import numpy as np
 
 # Charger les variables d'environnement (.env)
 load_dotenv()
@@ -42,10 +44,13 @@ CORS(app)  # Permet les requêtes depuis le frontend
 # Charger le modèle au démarrage
 MODEL_PATH = 'models/attrition_model.pkl'
 model = None
+explainer = None
+preprocessor = None
+classifier = None
 
 def load_model():
     """Charge le modèle entraîné"""
-    global model
+    global model, explainer, preprocessor, classifier
     if not os.path.exists(MODEL_PATH):
         print(f"❌ Erreur: Le modèle n'existe pas à {MODEL_PATH}")
         print("💡 Lancez d'abord: python train_model.py")
@@ -53,6 +58,24 @@ def load_model():
     
     with open(MODEL_PATH, 'rb') as f:
         model = pickle.load(f)
+
+    # Initialiser SHAP Explainer
+    try:
+        print("🤔 Initialisation de SHAP Explainer...")
+        # Check if model is a Pipeline
+        if hasattr(model, 'named_steps'):
+            preprocessor = model.named_steps['preprocessor']
+            classifier = model.named_steps['classifier']
+            explainer = shap.TreeExplainer(classifier)
+            print(f"✅ SHAP Explainer prêt (sur Pipeline: {type(classifier).__name__}).")
+        else:
+            # Fallback for raw model
+            explainer = shap.TreeExplainer(model)
+            print("✅ SHAP Explainer prêt (sur Modèle brut).")
+            
+    except Exception as e:
+        print(f"⚠️ Erreur init SHAP: {e}")
+        explainer = None
     
     import time
     mod_time = os.path.getmtime(MODEL_PATH)
@@ -156,6 +179,61 @@ def predict():
             ]
         else:
             recommendations = ["Employé satisfait - Continuer le bon travail!"]
+
+        # 4. SHAP Explanation
+        explanation_data = None
+        if explainer and preprocessor is not None:
+            try:
+                # 1. Transform input data using the pipeline's preprocessor
+                # SHAP needs the transformed numeric matrix that the model actually sees
+                X_transformed = preprocessor.transform(employee_df)
+                
+                # 2. Variable names (need to retrieve feature names from OneHotEncoder)
+                feature_names = []
+                
+                # Retrieve feature names from ColumnTransformer
+                try:
+                    feature_names = preprocessor.get_feature_names_out()
+                except:
+                    # Fallback
+                    feature_names = [f"Feature {i}" for i in range(X_transformed.shape[1])]
+
+                # 3. Calculate SHAP
+                shap_valores = explainer.shap_values(X_transformed)
+                
+                # Handle binary classification
+                vals = shap_valores
+                if isinstance(shap_valores, list):
+                    vals = shap_valores[1] # Class 1 = Yes
+                elif len(np.array(shap_valores).shape) == 3: 
+                    vals = np.array(shap_valores)[:,:,1]
+                
+                feature_values = vals[0] # Single sample
+                
+                # 4. Map back to JSON
+                features_map = []
+                for i, impact in enumerate(feature_values):
+                    # Clean feature name
+                    feat_name = str(feature_names[i])
+                    features_map.append({
+                        "feature": feat_name,
+                        "impact": float(impact),
+                        "value": "N/A"
+                    })
+                
+                # Top Risk Factors
+                risk_factors = sorted([f for f in features_map if f['impact'] > 0], key=lambda x: x['impact'], reverse=True)[:5]
+                
+                # Top Protective Factors
+                protective_factors = sorted([f for f in features_map if f['impact'] < 0], key=lambda x: x['impact'])[:5]
+                
+                explanation_data = {
+                    "risk_factors": risk_factors,
+                    "protective_factors": protective_factors
+                }
+            except Exception as e:
+                print(f"⚠️ SHAP Error during calculation: {e}")
+                explanation_data = None
         
         response = {
             'prediction': {
@@ -168,7 +246,8 @@ def predict():
             },
             'risk_level': risk_level,
             'recommendations': recommendations,
-            'employee_data': data
+            'employee_data': data,
+            'explainability': explanation_data
         }
         
         return jsonify(response), 200

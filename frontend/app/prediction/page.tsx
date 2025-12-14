@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePrediction } from '../context/PredictionContext';
+import RealTimeSimulator from '../components/RealTimeSimulator';
+import ExplainabilityChart from '../components/ExplainabilityChart';
 
 interface PredictionResult {
     prediction: {
@@ -15,13 +17,16 @@ interface PredictionResult {
     };
     risk_level: string;
     recommendations: string[];
+    explainability?: {
+        risk_factors: any[];
+        protective_factors: any[];
+    };
 }
 
 export default function PredictionPage() {
-    const { setFormData, predictionResult, setPredictionResult } = usePrediction();
+    const { formData, setFormData, predictionResult, setPredictionResult } = usePrediction();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    // const [result, setResult] = useState<PredictionResult | null>(null); // Use context instead
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -29,7 +34,7 @@ export default function PredictionPage() {
         setError('');
         setPredictionResult(null);
 
-        const formData = new FormData(e.currentTarget);
+        const formDataObj = new FormData(e.currentTarget);
         const data: Record<string, any> = {};
         const intFields = ['Age', 'DistanceFromHome', 'Education', 'JobLevel', 'MonthlyIncome',
             'TotalWorkingYears', 'YearsAtCompany', 'YearsWithCurrManager',
@@ -40,7 +45,7 @@ export default function PredictionPage() {
 
         const floatFields = ['AvgWorkingHours', 'AvgOvertime', 'AbsenceRate', 'WorkHoursVariance'];
 
-        formData.forEach((value, key) => {
+        formDataObj.forEach((value, key) => {
             if (intFields.includes(key)) {
                 data[key] = parseInt(value as string);
             } else if (floatFields.includes(key)) {
@@ -213,30 +218,42 @@ export default function PredictionPage() {
 
                     {/* Result */}
                     {predictionResult && (
-                        <div className={`mt-8 p-8 rounded-2xl border-2 ${predictionResult.prediction.will_leave
-                            ? 'bg-red-500/10 border-red-500/30'
-                            : 'bg-emerald/10 border-emerald/30'
-                            }`}>
-                            <div className={`text-3xl font-bold mb-4 ${predictionResult.prediction.will_leave ? 'text-red-400' : 'text-emerald-light'
+                        <>
+                            <div className={`mt-8 p-8 rounded-2xl border-2 ${predictionResult.prediction.will_leave
+                                ? 'bg-red-500/10 border-red-500/30'
+                                : 'bg-emerald/10 border-emerald/30'
                                 }`}>
-                                {predictionResult.prediction.will_leave ? '⚠️ Risque d\'Attrition: OUI' : '✅ Risque d\'Attrition: NON'}
+                                <div className={`text-3xl font-bold mb-4 ${predictionResult.prediction.will_leave ? 'text-red-400' : 'text-emerald-light'
+                                    }`}>
+                                    {predictionResult.prediction.will_leave ? '⚠️ Risque d\'Attrition: OUI' : '✅ Risque d\'Attrition: NON'}
+                                </div>
+                                <div className={`text-6xl font-bold my-6 ${predictionResult.prediction.will_leave ? 'text-red-400' : 'text-emerald'
+                                    }`}>
+                                    {predictionResult.prediction.will_leave ? predictionResult.probabilities.leave : predictionResult.probabilities.stay}%
+                                </div>
+                                <div className="mt-6">
+                                    <h3 className="text-xl font-bold mb-3 text-light">💡 Recommandations:</h3>
+                                    <ul className="space-y-2">
+                                        {predictionResult.recommendations.map((rec: string, i: number) => (
+                                            <li key={i} className="flex gap-3 text-light/80">
+                                                <span className="text-emerald-light">→</span>
+                                                <span>{rec}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
-                            <div className={`text-6xl font-bold my-6 ${predictionResult.prediction.will_leave ? 'text-red-400' : 'text-emerald'
-                                }`}>
-                                {predictionResult.prediction.will_leave ? predictionResult.probabilities.leave : predictionResult.probabilities.stay}%
-                            </div>
-                            <div className="mt-6">
-                                <h3 className="text-xl font-bold mb-3 text-light">💡 Recommandations:</h3>
-                                <ul className="space-y-2">
-                                    {predictionResult.recommendations.map((rec: string, i: number) => (
-                                        <li key={i} className="flex gap-3 text-light/80">
-                                            <span className="text-emerald-light">→</span>
-                                            <span>{rec}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
+
+                            {/* Simulator */}
+                            <RealTimeSimulator initialData={formData} />
+
+                            {/* SHAP Chart */}
+                            {predictionResult.explainability && (
+                                <ExplainabilityChart data={predictionResult.explainability} />
+                            )}
+
+
+                        </>
                     )}
                 </div>
             </div>
