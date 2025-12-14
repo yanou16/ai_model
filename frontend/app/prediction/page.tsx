@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePrediction } from '../context/PredictionContext';
 
 interface PredictionResult {
     prediction: {
@@ -17,20 +18,19 @@ interface PredictionResult {
 }
 
 export default function PredictionPage() {
+    const { setFormData, predictionResult, setPredictionResult } = usePrediction();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [result, setResult] = useState<PredictionResult | null>(null);
+    // const [result, setResult] = useState<PredictionResult | null>(null); // Use context instead
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
         setError('');
-        setResult(null);
+        setPredictionResult(null);
 
         const formData = new FormData(e.currentTarget);
         const data: Record<string, any> = {};
-
-        // Convert form data to appropriate types
         const intFields = ['Age', 'DistanceFromHome', 'Education', 'JobLevel', 'MonthlyIncome',
             'TotalWorkingYears', 'YearsAtCompany', 'YearsWithCurrManager',
             'YearsSinceLastPromotion', 'NumCompaniesWorked', 'PercentSalaryHike',
@@ -50,6 +50,9 @@ export default function PredictionPage() {
             }
         });
 
+        // Store in context for Chatbot
+        setFormData(data);
+
         try {
             const response = await fetch('http://localhost:5000/predict', {
                 method: 'POST',
@@ -60,7 +63,7 @@ export default function PredictionPage() {
             if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
 
             const result = await response.json();
-            setResult(result);
+            setPredictionResult(result);
         } catch (err: any) {
             setError(`❌ Erreur: ${err.message}. Assurez-vous que l'API est démarrée (python api.py)`);
         } finally {
@@ -209,23 +212,23 @@ export default function PredictionPage() {
                     )}
 
                     {/* Result */}
-                    {result && (
-                        <div className={`mt-8 p-8 rounded-2xl border-2 ${result.prediction.will_leave
-                                ? 'bg-red-500/10 border-red-500/30'
-                                : 'bg-emerald/10 border-emerald/30'
+                    {predictionResult && (
+                        <div className={`mt-8 p-8 rounded-2xl border-2 ${predictionResult.prediction.will_leave
+                            ? 'bg-red-500/10 border-red-500/30'
+                            : 'bg-emerald/10 border-emerald/30'
                             }`}>
-                            <div className={`text-3xl font-bold mb-4 ${result.prediction.will_leave ? 'text-red-400' : 'text-emerald-light'
+                            <div className={`text-3xl font-bold mb-4 ${predictionResult.prediction.will_leave ? 'text-red-400' : 'text-emerald-light'
                                 }`}>
-                                {result.prediction.will_leave ? '⚠️ Risque d\'Attrition: OUI' : '✅ Risque d\'Attrition: NON'}
+                                {predictionResult.prediction.will_leave ? '⚠️ Risque d\'Attrition: OUI' : '✅ Risque d\'Attrition: NON'}
                             </div>
-                            <div className={`text-6xl font-bold my-6 ${result.prediction.will_leave ? 'text-red-400' : 'text-emerald'
+                            <div className={`text-6xl font-bold my-6 ${predictionResult.prediction.will_leave ? 'text-red-400' : 'text-emerald'
                                 }`}>
-                                {result.prediction.will_leave ? result.probabilities.leave : result.probabilities.stay}%
+                                {predictionResult.prediction.will_leave ? predictionResult.probabilities.leave : predictionResult.probabilities.stay}%
                             </div>
                             <div className="mt-6">
                                 <h3 className="text-xl font-bold mb-3 text-light">💡 Recommandations:</h3>
                                 <ul className="space-y-2">
-                                    {result.recommendations.map((rec, i) => (
+                                    {predictionResult.recommendations.map((rec: string, i: number) => (
                                         <li key={i} className="flex gap-3 text-light/80">
                                             <span className="text-emerald-light">→</span>
                                             <span>{rec}</span>

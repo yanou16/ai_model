@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import ChatAssistant from './components/ChatAssistant';
 
 // Animation variants
 const fadeInUp = {

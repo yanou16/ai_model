@@ -10,8 +10,8 @@ import os
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestClassifier
+from imblearn.pipeline import Pipeline
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 def extract_time_features():
@@ -77,7 +77,6 @@ def extract_time_features():
     
     time_df = pd.DataFrame(time_features)
     print(f"✅ Features temporelles extraites pour {len(time_df)} employés")
-    print(f"   Nouvelles colonnes: {list(time_df.columns[1:])}")
     
     return time_df
 
@@ -94,13 +93,9 @@ def load_and_prepare_data():
     df = general.merge(manager, on="EmployeeID", how="left")
     df = df.merge(employee, on="EmployeeID", how="left")
     
-    print(f"✅ Données de base chargées: {df.shape[0]} employés, {df.shape[1]} colonnes")
-    
     # Ajouter les features temporelles
     time_features = extract_time_features()
     df = df.merge(time_features, on="EmployeeID", how="left")
-    
-    print(f"✅ Données finales: {df.shape[0]} employés, {df.shape[1]} colonnes")
     
     return df
 
@@ -123,14 +118,18 @@ def clean_data(df):
     df["Attrition"] = df["Attrition"].map({"Yes": 1, "No": 0})
     df["Attrition"] = df["Attrition"].astype(int)
     
-    print(f"✅ Nettoyage terminé: {df.isnull().sum().sum()} valeurs manquantes")
-    
     return df
 
 def train_model(df):
     """Entraîne le modèle"""
     print("\n🤖 Entraînement du modèle...")
     
+    # MANUEL OVERSAMPLING (Brutal but effective)
+    print("   ⚠️ Application Oversampling Manuel (x4) sur la classe 'Yes'...")
+    leavers = df[df['Attrition'] == 1]
+    df = pd.concat([df, leavers, leavers, leavers], axis=0) # Duplicate 3 times -> Total 4x
+    print(f"   Nouvelle taille du dataset: {df.shape}")
+
     # Séparer features et target
     X = df.drop(['Attrition', 'EmployeeID'], axis=1)
     y = df['Attrition']
@@ -138,9 +137,6 @@ def train_model(df):
     # Identifier colonnes
     numeric_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
     categorical_features = X.select_dtypes(include=['object']).columns.tolist()
-    
-    print(f"   • {len(numeric_features)} features numériques")
-    print(f"   • {len(categorical_features)} features catégorielles")
     
     # Split
     X_train, X_test, y_train, y_test = train_test_split(
@@ -155,14 +151,14 @@ def train_model(df):
         ]
     )
     
-    # Pipeline avec RandomForest (plus rapide que SVM)
+    # Pipeline avec GradientBoosting
     model = Pipeline([
         ('preprocessor', preprocessor),
-        ('classifier', RandomForestClassifier(
-            n_estimators=100,
-            max_depth=10,
-            random_state=42,
-            n_jobs=-1
+        ('classifier', GradientBoostingClassifier(
+            n_estimators=300,
+            learning_rate=0.1,
+            max_depth=5,
+            random_state=42
         ))
     ])
     
@@ -180,32 +176,20 @@ def train_model(df):
     print("\n📈 Rapport de classification:")
     print(classification_report(y_test, y_pred, target_names=['Reste', 'Quitte']))
     
-    print("\n📊 Matrice de confusion:")
-    cm = confusion_matrix(y_test, y_pred)
-    print(f"   Vrais Négatifs: {cm[0][0]}  |  Faux Positifs: {cm[0][1]}")
-    print(f"   Faux Négatifs:  {cm[1][0]}  |  Vrais Positifs: {cm[1][1]}")
-    
     return model
 
 def save_model(model):
     """Sauvegarde le modèle"""
     print("\n💾 Sauvegarde du modèle...")
-    
-    # Créer le dossier models s'il n'existe pas
     os.makedirs('models', exist_ok=True)
-    
-    # Sauvegarder
     model_path = 'models/attrition_model.pkl'
     with open(model_path, 'wb') as f:
         pickle.dump(model, f)
-    
     print(f"✅ Modèle sauvegardé: {model_path}")
 
 def main():
     """Fonction principale"""
-    print("\n" + "="*60)
-    print("🚀 ENTRAÎNEMENT DU MODÈLE DE PRÉDICTION D'ATTRITION")
-    print("="*60 + "\n")
+    print("🚀 ENTRAÎNEMENT DU MODÈLE DE PRÉDICTION D'ATTRITION (Boosting)")
     
     # Charger et préparer
     df = load_and_prepare_data()
@@ -216,11 +200,6 @@ def main():
     
     # Sauvegarder
     save_model(model)
-    
-    print("\n" + "="*60)
-    print("✅ TERMINÉ! Vous pouvez maintenant utiliser:")
-    print("   python predict_attrition.py")
-    print("="*60 + "\n")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,21 @@
+--- Test sur 5 employés qui sont VRAIMENT partis ---
+Employé #1 (Parti): Score Modell = 77.72% | Prédiction = OUI
+   Age: 31, Dept: Research & Development, Role: Research Scientist, Income: 41890
+   Satisfaction: 2.0, OT: 2.0
+------------------------------
+Employé #6 (Parti): Score Modell = 80.83% | Prédiction = OUI
+   Age: 28, Dept: Research & Development, Role: Sales Executive, Income: 58130
+   Satisfaction: 3.0, OT: 2.0
+------------------------------
+Employé #13 (Parti): Score Modell = 68.17% | Prédiction = OUI
+   Age: 47, Dept: Research & Development, Role: Research Scientist, Income: 57620
+   Satisfaction: 2.0, OT: 2.0
+------------------------------
+Employé #28 (Parti): Score Modell = 84.40% | Prédiction = OUI
+   Age: 44, Dept: Research & Development, Role: Research Scientist, Income: 103330
+   Satisfaction: 3.0, OT: 2.0
+------------------------------
+Employé #30 (Parti): Score Modell = 68.89% | Prédiction = OUI
+   Age: 26, Dept: Research & Development, Role: Research Scientist, Income: 68540
+   Satisfaction: 2.0, OT: 2.0
+------------------------------

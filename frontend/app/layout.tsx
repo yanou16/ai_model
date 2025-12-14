@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import ChatAssistant from "./components/ChatAssistant";
+import { PredictionProvider } from "./context/PredictionContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,7 +18,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${inter.className} antialiased`}>{children}</body>
+      <body className={`${inter.className} antialiased`}>
+        <PredictionProvider>
+          {children}
+          <ChatAssistant />
+        </PredictionProvider>
+      </body>
     </html>
   );
 }

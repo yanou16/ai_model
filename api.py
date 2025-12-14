@@ -8,6 +8,33 @@ from flask_cors import CORS
 import pandas as pd
 import pickle
 import os
+import google.generativeai as genai
+from groq import Groq
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement (.env)
+load_dotenv()
+
+# Configurer Gemini
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        print(f"⚠️ Erreur config Gemini: {e}")
+else:
+    print("⚠️ Attention: GEMINI_API_KEY non trouvé dans les variables d'environnement.")
+
+# Configurer Groq
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+groq_client = None
+if GROQ_API_KEY:
+    try:
+        groq_client = Groq(api_key=GROQ_API_KEY)
+    except Exception as e:
+        print(f"⚠️ Erreur config Groq: {e}")
+else:
+    print("⚠️ Attention: GROQ_API_KEY non trouvé dans les variables d'environnement.")
 
 app = Flask(__name__)
 CORS(app)  # Permet les requêtes depuis le frontend
@@ -27,7 +54,12 @@ def load_model():
     with open(MODEL_PATH, 'rb') as f:
         model = pickle.load(f)
     
+    import time
+    mod_time = os.path.getmtime(MODEL_PATH)
+    time_str = time.ctime(mod_time)
     print(f"✅ Modèle chargé avec succès!")
+    print(f"📅 Timestamp du modèle: {time_str}")
+    print(f"☢️  VERSION: NUCLEAR (GradientBoosting)")
     return True
 
 @app.route('/health', methods=['GET'])
@@ -38,142 +70,6 @@ def health_check():
         'message': 'API de prédiction d\'attrition opérationnelle',
         'model_loaded': model is not None
     })
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    """
-    Endpoint principal pour prédire l'attrition
-    
-    Exemple de requête JSON:
-    {
-        "Age": 35,
-        "Gender": "Male",
-        "MaritalStatus": "Married",
-        "DistanceFromHome": 10,
-        "Education": 3,
-        "EducationField": "Life Sciences",
-        "Department": "Research & Development",
-        "JobRole": "Research Scientist",
-        "JobLevel": 2,
-        "MonthlyIncome": 5000,
-        "TotalWorkingYears": 10,
-        "YearsAtCompany": 5,
-        "YearsWithCurrManager": 3,
-        "YearsSinceLastPromotion": 1,
-        "NumCompaniesWorked": 2,
-        "BusinessTravel": "Travel_Rarely",
-        "PercentSalaryHike": 15,
-        "StockOptionLevel": 1,
-        "TrainingTimesLastYear": 3,
-        "EnvironmentSatisfaction": 3,
-        "JobSatisfaction": 4,
-        "WorkLifeBalance": 3,
-        "JobInvolvement": 3,
-        "PerformanceRating": 3
-    }
-    """
-    
-    if model is None:
-        return jsonify({
-            'error': 'Modèle non chargé',
-            'message': 'Le modèle n\'a pas pu être chargé au démarrage'
-        }), 500
-    
-    try:
-        # Récupérer les données JSON
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({
-                'error': 'Données manquantes',
-                'message': 'Veuillez fournir les données de l\'employé en JSON'
-            }), 400
-        
-        # Valider les champs requis
-        required_fields = [
-            'Age', 'Gender', 'MaritalStatus', 'DistanceFromHome', 'Education',
-            'EducationField', 'Department', 'JobRole', 'JobLevel', 'MonthlyIncome',
-            'TotalWorkingYears', 'YearsAtCompany', 'YearsWithCurrManager',
-            'YearsSinceLastPromotion', 'NumCompaniesWorked', 'BusinessTravel',
-            'PercentSalaryHike', 'StockOptionLevel', 'TrainingTimesLastYear',
-            'EnvironmentSatisfaction', 'JobSatisfaction', 'WorkLifeBalance',
-            'JobInvolvement', 'PerformanceRating'
-        ]
-        
-        missing_fields = [field for field in required_fields if field not in data]
-        if missing_fields:
-            return jsonify({
-                'error': 'Champs manquants',
-                'missing_fields': missing_fields
-            }), 400
-        
-        # Ajouter les features temporelles optionnelles avec valeurs par défaut
-        # Ces valeurs sont les médianes calculées sur le dataset d'entraînement
-        optional_time_features = {
-            'AvgWorkingHours': 8.5,
-            'LateArrivals': 10,
-            'AvgOvertime': 0.5,
-            'AbsenceRate': 5.0,
-            'WorkHoursVariance': 1.0
-        }
-        
-        for feature, default_value in optional_time_features.items():
-            if feature not in data:
-                data[feature] = default_value
-        
-        # Créer un DataFrame avec les données
-        employee_df = pd.DataFrame([data])
-        
-        # Faire la prédiction
-        prediction = model.predict(employee_df)[0]
-        proba = model.predict_proba(employee_df)[0]
-        
-        # Probabilités
-        proba_no = float(proba[0] * 100)
-        proba_yes = float(proba[1] * 100)
-        
-        # Déterminer le niveau de risque
-        risk_level = 'low'
-        if prediction == 1:
-            if proba_yes > 70:
-                risk_level = 'high'
-            elif proba_yes > 50:
-                risk_level = 'medium'
-        
-        # Recommandations
-        recommendations = []
-        if prediction == 1:
-            recommendations = [
-                "Organiser un entretien individuel",
-                "Évaluer les opportunités de promotion",
-                "Améliorer l'équilibre vie pro/perso",
-                "Proposer des formations supplémentaires"
-            ]
-        else:
-            recommendations = ["Employé satisfait - Continuer le bon travail!"]
-        
-        # Réponse
-        response = {
-            'prediction': {
-                'will_leave': bool(prediction == 1),
-                'label': 'Oui' if prediction == 1 else 'Non'
-            },
-            'probabilities': {
-                'stay': round(proba_no, 2),
-                'leave': round(proba_yes, 2)
-            },
-            'risk_level': risk_level,
-            'recommendations': recommendations,
-            'employee_data': data
-        }
-        
-        return jsonify(response), 200
-        
-    except Exception as e:
-        return jsonify({
-            'error': 'Erreur lors de la prédiction',
-            'message': str(e)
-        }), 500
 
 @app.route('/fields', methods=['GET'])
 def get_fields():
@@ -214,23 +110,162 @@ def get_fields():
         }
     })
 
+@app.route('/predict', methods=['POST'])
+def predict():
+    """Endpoint principal pour prédire l'attrition"""
+    if model is None:
+        return jsonify({
+            'error': 'Modèle non chargé',
+            'message': 'Le modèle n\'a pas pu être chargé au démarrage'
+        }), 500
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Données manquantes', 'message': 'Veuillez fournir les données de l\'employé en JSON'}), 400
+        
+        # Ajouter les features temporelles optionnelles par défaut si manquantes
+        optional_time_features = {
+            'AvgWorkingHours': 8.5, 'LateArrivals': 10, 'AvgOvertime': 0.5,
+            'AbsenceRate': 5.0, 'WorkHoursVariance': 1.0
+        }
+        for feature, default_value in optional_time_features.items():
+            if feature not in data:
+                data[feature] = default_value
+        
+        employee_df = pd.DataFrame([data])
+        
+        prediction = model.predict(employee_df)[0]
+        proba = model.predict_proba(employee_df)[0]
+        
+        proba_no = float(proba[0] * 100)
+        proba_yes = float(proba[1] * 100)
+        
+        risk_level = 'low'
+        if prediction == 1:
+            if proba_yes > 70: risk_level = 'high'
+            elif proba_yes > 50: risk_level = 'medium'
+        
+        recommendations = []
+        if prediction == 1:
+            recommendations = [
+                "Organiser un entretien individuel",
+                "Évaluer les opportunités de promotion",
+                "Améliorer l'équilibre vie pro/perso",
+                "Proposer des formations supplémentaires"
+            ]
+        else:
+            recommendations = ["Employé satisfait - Continuer le bon travail!"]
+        
+        response = {
+            'prediction': {
+                'will_leave': bool(prediction == 1),
+                'label': 'Oui' if prediction == 1 else 'Non'
+            },
+            'probabilities': {
+                'stay': round(proba_no, 2),
+                'leave': round(proba_yes, 2)
+            },
+            'risk_level': risk_level,
+            'recommendations': recommendations,
+            'employee_data': data
+        }
+        
+        return jsonify(response), 200
+        
+    except Exception as e:
+        return jsonify({'error': 'Erreur lors de la prédiction', 'message': str(e)}), 500
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """Endpoint pour le chatbot (Gemini ou Groq)"""
+    data = request.get_json()
+    user_message = data.get('message', '')
+    provider = data.get('provider', 'gemini') # 'gemini' or 'groq'
+    
+    if not user_message:
+        return jsonify({'reply': "Je n'ai pas compris votre message."}), 400
+
+    employee_context = ""
+    employee_data = data.get('employee_data')
+    prediction_result = data.get('prediction_result')
+
+    if employee_data:
+        employee_context += f"""
+    CONTEXTE PROFIL EMPLOYÉ (Données du formulaire) :
+    {employee_data}
+    """
+
+    if prediction_result:
+        probabilities = prediction_result.get('probabilities', {})
+        risk_level = prediction_result.get('risk_level', 'inconnu')
+        employee_context += f"""
+    RÉSULTAT DE LA PRÉDICTION ACTUELLE :
+    - Risque d'Attrition : {risk_level.upper()}
+    - Probabilité de Départ : {probabilities.get('leave', 0)}%
+    
+    Utilise ces pourcentages pour justifier tes conseils.
+    """
+
+    context = f"""
+    Tu es un Expert RH Analytique intégré dans un Dashboard de Prédiction d'Attrition.
+    Ton rôle est d'aider l'utilisateur à comprendre pourquoi un employé part, et à simuler des scénarios.
+
+    Données du Modèle d'Attrition (Random Forest + SMOTE) :
+    - Facteurs clés : TotalWorkingYears, Age, MonthlyIncome, YearsAtCompany, DistanceFromHome.
+
+    {employee_context}
+
+    Consignes :
+    - Si une donnée contextuelle existe, utilise-la.
+    - Sois concis, professionnel et direct.
+    - Réponds en Français.
+    """
+    
+    try:
+        reply = ""
+        
+        if provider == 'groq':
+            if not groq_client:
+                 return jsonify({'reply': "⚠️ API Key Groq manquante. Configurez GROQ_API_KEY."}), 200
+            
+            print("🚀 Utilisation de Groq (Llama 3)...")
+            chat_completion = groq_client.chat.completions.create(
+                messages=[{'role': 'system', 'content': context}, {'role': 'user', 'content': user_message}],
+                model="llama-3.3-70b-versatile",
+            )
+            reply = chat_completion.choices[0].message.content
+            
+        else: # Default to Gemini
+            if not GEMINI_API_KEY:
+                 return jsonify({'reply': "⚠️ API Key Gemini manquante."}), 200
+                 
+            print("✨ Utilisation de Gemini...")
+            model = genai.GenerativeModel('gemini-robotics-er-1.5-preview')
+            response = model.generate_content(f"{context}\n\nQuestion Utilisateur : {user_message}")
+            reply = response.text
+
+        return jsonify({'reply': reply})
+        
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Erreur IA: {error_msg}")
+        return jsonify({'reply': f"Erreur technique ({provider}) : {error_msg}"}), 200
+
 if __name__ == '__main__':
     print("\n" + "="*60)
     print("🚀 API DE PRÉDICTION D'ATTRITION DES EMPLOYÉS")
     print("="*60 + "\n")
     
-    # Charger le modèle
     if not load_model():
         print("\n⚠️  L'API va démarrer mais les prédictions ne fonctionneront pas.")
-        print("   Entraînez d'abord le modèle avec: python train_model.py\n")
     
     print("\n📡 Endpoints disponibles:")
     print("   GET  /health  - Vérifier le statut de l'API")
-    print("   GET  /fields  - Liste des champs requis")
-    print("   POST /predict - Prédire l'attrition d'un employé")
+    print("   POST /predict - Prédire l'attrition")
+    print("   POST /chat    - Discuter avec l'Assistant RH")
     
     print("\n🌐 L'API démarre sur http://localhost:5000")
     print("="*60 + "\n")
     
-    # Démarrer l'API
     app.run(debug=True, host='0.0.0.0', port=5000)
