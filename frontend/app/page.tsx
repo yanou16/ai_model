@@ -1,291 +1,407 @@
 'use client';
 
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
-import ChatAssistant from './components/ChatAssistant';
+import React, { useState } from 'react';
+import { usePrediction } from './context/PredictionContext';
+import Sidebar from './components/Sidebar';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line, CartesianGrid } from 'recharts';
 
-// Animation variants
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-};
+// Options
+const DEPARTMENTS = ['Sales', 'Research & Development', 'Human Resources'];
+const JOB_ROLES = ['Sales Executive', 'Research Scientist', 'Laboratory Technician', 'Manufacturing Director', 'Healthcare Representative', 'Manager', 'Sales Representative', 'Research Director', 'Human Resources'];
+const EDUCATION_FIELDS = ['Life Sciences', 'Medical', 'Marketing', 'Technical Degree', 'Human Resources', 'Other'];
+const TRAVEL_OPTIONS = ['Non-Travel', 'Travel_Rarely', 'Travel_Frequently'];
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.2
-    }
-  }
-};
+export default function Dashboard() {
+    const { setFormData, setPredictionResult } = usePrediction();
+    const [isLoading, setIsLoading] = useState(false);
+    const [prediction, setPrediction] = useState<any>(null);
+    const [explainability, setExplainability] = useState<any>(null);
+    
+    const [form, setForm] = useState({
+        Age: 35, Gender: 'Male', MaritalStatus: 'Single',
+        Department: 'Research & Development', JobRole: 'Research Scientist', JobLevel: 2,
+        MonthlyIncome: 5000, YearsAtCompany: 5, YearsWithCurrManager: 3,
+        TotalWorkingYears: 10, NumCompaniesWorked: 2, DistanceFromHome: 10,
+        BusinessTravel: 'Travel_Rarely', Education: 3, EducationField: 'Life Sciences',
+        JobSatisfaction: 3, EnvironmentSatisfaction: 3, WorkLifeBalance: 3,
+        JobInvolvement: 3, PerformanceRating: 3, PercentSalaryHike: 15,
+        StockOptionLevel: 1, TrainingTimesLastYear: 3, YearsSinceLastPromotion: 2,
+    });
 
-const scaleIn = {
-  hidden: { scale: 0.8, opacity: 0 },
-  visible: { scale: 1, opacity: 1, transition: { duration: 0.5 } }
-};
-
-export default function Home() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        setForm(prev => ({ ...prev, [name]: type === 'number' ? parseFloat(value) : value }));
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
-  return (
-    <div className="min-h-screen bg-dark text-light selection:bg-emerald selection:text-white overflow-hidden">
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            const response = await fetch('http://localhost:5000/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form),
+            });
+            const data = await response.json();
+            setPrediction(data);
+            setExplainability(data.explainability);
+            setFormData(form);
+            setPredictionResult(data.probabilities?.leave);
+        } catch (error) {
+            console.error('Prediction error:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-      {/* Background Animated Elements */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald/10 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-dark/10 rounded-full blur-[100px] animate-pulse delay-700" />
-      </div>
+    const riskScore = prediction?.probabilities?.leave || 0;
+    const stayScore = prediction?.probabilities?.stay || 0;
 
-      {/* Navigation */}
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-dark/90 backdrop-blur-md border-b border-emerald/20 py-4 shadow-lg' : 'bg-transparent py-6'
-          }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-emerald to-emerald-light bg-clip-text text-transparent hover:scale-105 transition-transform">
-            AttritionAI
-          </Link>
-          <div className="flex gap-8 items-center">
-            <a href="#features" className="text-light/80 hover:text-emerald-light transition-colors font-medium">
-              Fonctionnalités
-            </a>
-            <a href="#ethics" className="text-light/80 hover:text-emerald-light transition-colors font-medium">
-              Éthique
-            </a>
-            <Link
-              href="/prediction"
-              className="px-6 py-2.5 bg-gradient-to-r from-emerald to-emerald-dark rounded-full font-semibold text-white shadow-lg shadow-emerald/20 hover:shadow-emerald/40 hover:-translate-y-0.5 transition-all"
-            >
-              Essayer Maintenant →
-            </Link>
-          </div>
-        </div>
-      </motion.nav>
+    // Chart data
+    const probabilityData = prediction ? [
+        { name: 'Rester', value: stayScore, fill: '#22c55e' },
+        { name: 'Partir', value: riskScore, fill: '#ef4444' },
+    ] : [];
 
-      {/* Hero Section */}
-      <section className="relative pt-40 pb-20 px-6 z-10">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={staggerContainer}
-          className="max-w-7xl mx-auto text-center"
-        >
-          <motion.div variants={fadeInUp} className="inline-block px-4 py-2 bg-emerald/10 border border-emerald/30 rounded-full text-emerald-light text-sm font-semibold mb-8 backdrop-blur-sm">
-            🌱 IA Éthique & Bien-être au Travail
-          </motion.div>
+    const shapData = explainability ? [
+        ...explainability.risk_factors.slice(0, 5).map((f: any) => ({ name: f.feature, impact: f.impact, value: f.value })),
+        ...explainability.protective_factors.slice(0, 5).map((f: any) => ({ name: f.feature, impact: f.impact, value: f.value })),
+    ].sort((a, b) => b.impact - a.impact) : [];
 
-          <motion.h1 variants={fadeInUp} className="text-6xl md:text-8xl font-bold mb-8 leading-tight tracking-tight">
-            Prédisez l'Attrition avec<br />
-            <span className="bg-gradient-to-r from-emerald via-emerald-light to-emerald bg-clip-text text-transparent animate-gradient-x">
-              Humanité & Intelligence
-            </span>
-          </motion.h1>
+    return (
+        <div className="min-h-screen bg-zinc-950">
+            <Sidebar active="dashboard" />
 
-          <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-light/70 max-w-3xl mx-auto mb-12 leading-relaxed font-light">
-            Anticipez les départs de vos employés grâce à notre modèle d'IA éthique.
-            Analysez 29 indicateurs de bien-être et obtenez des recommandations humaines.
-          </motion.p>
+            {/* Main Content */}
+            <main className="ml-64 p-6">
+                {/* Header */}
+                <header className="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">Prédiction d'Attrition</h1>
+                        <p className="text-zinc-500 text-sm mt-1">Analysez le risque de départ d'un employé</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="badge badge-success">Model v2.1</span>
+                        <span className="text-zinc-500 text-sm">Accuracy: 95%</span>
+                    </div>
+                </header>
 
-          <motion.div variants={fadeInUp} className="flex gap-6 justify-center flex-wrap">
-            <Link
-              href="/prediction"
-              className="group relative px-8 py-4 bg-emerald rounded-xl font-bold text-lg text-white overflow-hidden shadow-2xl shadow-emerald/30 transition-all hover:scale-105"
-            >
-              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
-              <span className="relative flex items-center gap-2">
-                🚀 Commencer Gratuitement
-              </span>
-            </Link>
-            <a
-              href="#features"
-              className="px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-semibold text-lg hover:bg-white/10 hover:border-emerald/30 transition-all backdrop-blur-sm"
-            >
-              En savoir plus
-            </a>
-          </motion.div>
-        </motion.div>
-      </section>
+                <div className="grid grid-cols-12 gap-6">
+                    {/* Input Form - Left Column */}
+                    <div className="col-span-4">
+                        <form onSubmit={handleSubmit} className="card space-y-5">
+                            <div className="flex items-center justify-between border-b border-zinc-800 pb-4 -mx-5 px-5 -mt-5 pt-4">
+                                <h2 className="font-semibold text-white">Données Employé</h2>
+                                <span className="text-xs text-zinc-500">24 variables</span>
+                            </div>
 
-      {/* Features Section */}
-      <section id="features" className="py-32 px-6 bg-dark-light/30 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-            className="text-center mb-20"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Fonctionnalités Clés</h2>
-            <p className="text-light/60 text-xl font-light">Une approche humaine de la prédiction d'attrition</p>
-          </motion.div>
+                            {/* Demographics */}
+                            <div>
+                                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Démographie</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="label">Âge</label>
+                                        <input type="number" name="Age" value={form.Age} onChange={handleChange} className="input" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Genre</label>
+                                        <select name="Gender" value={form.Gender} onChange={handleChange} className="select">
+                                            <option value="Male">Homme</option>
+                                            <option value="Female">Femme</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Statut</label>
+                                        <select name="MaritalStatus" value={form.MaritalStatus} onChange={handleChange} className="select">
+                                            <option value="Single">Célibataire</option>
+                                            <option value="Married">Marié(e)</option>
+                                            <option value="Divorced">Divorcé(e)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Distance (km)</label>
+                                        <input type="number" name="DistanceFromHome" value={form.DistanceFromHome} onChange={handleChange} className="input" />
+                                    </div>
+                                </div>
+                            </div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={staggerContainer}
-            className="grid md:grid-cols-3 gap-8"
-          >
-            {[
-              { icon: "🤖", title: "IA Éthique", desc: "Modèle RandomForest transparent et explicable, respectueux de la vie privée." },
-              { icon: "💚", title: "Bien-être RH", desc: "Focus sur le bien-être avec recommandations pour améliorer la QVT." },
-              { icon: "📊", title: "29 Indicateurs", desc: "Analyse complète : RH, satisfaction, performance et données temporelles." },
-              { icon: "⚡", title: "Temps Réel", desc: "Résultats instantanés avec probabilités détaillées pour action rapide." },
-              { icon: "🎯", title: "Recommandations", desc: "Actions concrètes et humaines pour retenir vos talents." },
-              { icon: "🔒", title: "Confidentialité", desc: "Données privées traitées localement sur votre infrastructure sécurisée." }
-            ].map((feature, index) => (
-              <motion.div
-                key={index}
-                variants={fadeInUp}
-                whileHover={{ y: -10, transition: { duration: 0.2 } }}
-                className="p-8 bg-dark/50 border border-emerald/10 rounded-3xl hover:border-emerald/40 hover:bg-dark-light/80 transition-all group backdrop-blur-sm shadow-lg hover:shadow-emerald/10"
-              >
-                <div className="text-5xl mb-6 bg-dark-light w-20 h-20 flex items-center justify-center rounded-2xl group-hover:scale-110 transition-transform">{feature.icon}</div>
-                <h3 className="text-2xl font-bold mb-4 group-hover:text-emerald-light transition-colors">{feature.title}</h3>
-                <p className="text-light/60 leading-relaxed group-hover:text-light/80 transition-colors">
-                  {feature.desc}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+                            {/* Job */}
+                            <div>
+                                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Poste</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="label">Département</label>
+                                        <select name="Department" value={form.Department} onChange={handleChange} className="select">
+                                            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="label">Niveau</label>
+                                            <select name="JobLevel" value={form.JobLevel} onChange={handleChange} className="select">
+                                                {[1,2,3,4,5].map(l => <option key={l} value={l}>{l}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="label">Salaire ($)</label>
+                                            <input type="number" name="MonthlyIncome" value={form.MonthlyIncome} onChange={handleChange} className="input" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="label">Ancienneté</label>
+                                            <input type="number" name="YearsAtCompany" value={form.YearsAtCompany} onChange={handleChange} className="input" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Exp. Totale</label>
+                                            <input type="number" name="TotalWorkingYears" value={form.TotalWorkingYears} onChange={handleChange} className="input" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-      {/* Ethics Section */}
-      <section id="ethics" className="py-32 px-6 relative">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="max-w-7xl mx-auto"
-        >
-          <div className="relative bg-gradient-to-br from-emerald/10 to-dark p-1 rounded-[3rem]">
-            <div className="absolute inset-0 bg-emerald/20 blur-3xl -z-10" />
-            <div className="bg-dark/90 backdrop-blur-xl border border-emerald/20 rounded-[2.9rem] p-12 md:p-20 overflow-hidden relative">
+                            {/* Satisfaction */}
+                            <div>
+                                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Satisfaction (1-4)</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="label">Job</label>
+                                        <select name="JobSatisfaction" value={form.JobSatisfaction} onChange={handleChange} className="select">
+                                            {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Environnement</label>
+                                        <select name="EnvironmentSatisfaction" value={form.EnvironmentSatisfaction} onChange={handleChange} className="select">
+                                            {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Équilibre</label>
+                                        <select name="WorkLifeBalance" value={form.WorkLifeBalance} onChange={handleChange} className="select">
+                                            {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Performance</label>
+                                        <select name="PerformanceRating" value={form.PerformanceRating} onChange={handleChange} className="select">
+                                            {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
 
-              {/* Decorative circle */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald/10 rounded-full blur-[80px]" />
+                            <button 
+                                type="submit" 
+                                disabled={isLoading}
+                                className="w-full btn btn-primary flex items-center justify-center gap-2"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                        Analyse...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                        Analyser le Risque
+                                    </>
+                                )}
+                            </button>
+                        </form>
+                    </div>
 
-              <div className="relative z-10">
-                <div className="text-center mb-16">
-                  <h2 className="text-4xl md:text-5xl font-bold mb-6">Éthique & Transparence</h2>
-                  <p className="text-light/60 text-xl">Notre engagement pour une IA responsable</p>
+                    {/* Results - Right Columns */}
+                    <div className="col-span-8 space-y-6">
+                        {/* Stat Cards Row */}
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="card">
+                                <div className="card-header">
+                                    <span className="card-title">Risque de Départ</span>
+                                    {prediction && (
+                                        <span className={`badge ${riskScore > 50 ? 'badge-danger' : riskScore > 30 ? 'badge-warning' : 'badge-success'}`}>
+                                            {riskScore > 50 ? 'Élevé' : riskScore > 30 ? 'Modéré' : 'Faible'}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="card-value" style={{ color: prediction ? (riskScore > 50 ? '#ef4444' : riskScore > 30 ? '#eab308' : '#22c55e') : '#71717a' }}>
+                                    {prediction ? `${riskScore.toFixed(1)}%` : '—'}
+                                </div>
+                                <p className="text-xs text-zinc-500 mt-2">Probabilité de quitter l'entreprise</p>
+                            </div>
+
+                            <div className="card">
+                                <div className="card-header">
+                                    <span className="card-title">Probabilité Rester</span>
+                                </div>
+                                <div className="card-value text-emerald-400">
+                                    {prediction ? `${stayScore.toFixed(1)}%` : '—'}
+                                </div>
+                                <p className="text-xs text-zinc-500 mt-2">Probabilité de rester</p>
+                            </div>
+
+                            <div className="card">
+                                <div className="card-header">
+                                    <span className="card-title">Confiance Modèle</span>
+                                </div>
+                                <div className="card-value text-white">
+                                    {prediction ? '95%' : '—'}
+                                </div>
+                                <p className="text-xs text-zinc-500 mt-2">Score de confiance</p>
+                            </div>
+                        </div>
+
+                        {/* Charts Row */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Probability Pie Chart */}
+                            <div className="card">
+                                <div className="card-header">
+                                    <span className="card-title">Distribution des Probabilités</span>
+                                </div>
+                                {prediction ? (
+                                    <div className="h-[200px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={probabilityData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={50}
+                                                    outerRadius={80}
+                                                    paddingAngle={2}
+                                                    dataKey="value"
+                                                    label={({ name, value }) => `${name}: ${value.toFixed(0)}%`}
+                                                    labelLine={{ stroke: '#52525b' }}
+                                                >
+                                                    {probabilityData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip 
+                                                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px' }}
+                                                    labelStyle={{ color: '#fff' }}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                ) : (
+                                    <div className="h-[200px] flex items-center justify-center text-zinc-600">
+                                        Lancez une analyse pour voir les résultats
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Risk Gauge */}
+                            <div className="card">
+                                <div className="card-header">
+                                    <span className="card-title">Indicateur de Risque</span>
+                                </div>
+                                {prediction ? (
+                                    <div className="h-[200px] flex items-center justify-center">
+                                        <div className="relative">
+                                            <svg width="160" height="160" className="-rotate-90">
+                                                <circle cx="80" cy="80" r="70" stroke="#3f3f46" strokeWidth="12" fill="none" />
+                                                <circle 
+                                                    cx="80" cy="80" r="70" 
+                                                    stroke={riskScore > 50 ? '#ef4444' : riskScore > 30 ? '#eab308' : '#22c55e'}
+                                                    strokeWidth="12" 
+                                                    fill="none"
+                                                    strokeLinecap="round"
+                                                    strokeDasharray={`${(riskScore / 100) * 440} 440`}
+                                                    style={{ 
+                                                        transition: 'stroke-dasharray 1s ease',
+                                                        filter: `drop-shadow(0 0 8px ${riskScore > 50 ? '#ef4444' : riskScore > 30 ? '#eab308' : '#22c55e'})`
+                                                    }}
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className="text-3xl font-bold text-white">{riskScore.toFixed(0)}%</span>
+                                                <span className="text-xs text-zinc-500">Risque</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="h-[200px] flex items-center justify-center">
+                                        <div className="relative">
+                                            <svg width="160" height="160">
+                                                <circle cx="80" cy="80" r="70" stroke="#3f3f46" strokeWidth="12" fill="none" />
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className="text-3xl font-bold text-zinc-600">—</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Explainability Section */}
+                        <div className="card">
+                            <div className="card-header">
+                                <span className="card-title">Explication du Résultat (SHAP)</span>
+                                {prediction && <span className="text-xs text-zinc-500">Top 10 facteurs d'influence</span>}
+                            </div>
+                            {explainability && shapData.length > 0 ? (
+                                <div className="h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={shapData} layout="vertical" margin={{ left: 100 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" horizontal={false} />
+                                            <XAxis type="number" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={{ stroke: '#3f3f46' }} />
+                                            <YAxis 
+                                                dataKey="name" 
+                                                type="category" 
+                                                tick={{ fill: '#a1a1aa', fontSize: 12 }} 
+                                                axisLine={{ stroke: '#3f3f46' }}
+                                                width={100}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px' }}
+                                                labelStyle={{ color: '#fff', fontWeight: 600 }}
+                                                formatter={(value: number, name: string, props: any) => [
+                                                    <span key="v" style={{ color: value > 0 ? '#ef4444' : '#22c55e' }}>
+                                                        Impact: {value > 0 ? '+' : ''}{value.toFixed(3)}
+                                                    </span>,
+                                                    `Valeur: ${props.payload.value}`
+                                                ]}
+                                            />
+                                            <Bar dataKey="impact" radius={[0, 4, 4, 0]}>
+                                                {shapData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.impact > 0 ? '#ef4444' : '#22c55e'} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-[300px] flex flex-col items-center justify-center text-zinc-600">
+                                    <svg className="w-12 h-12 mb-3 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    <p>Lancez une analyse pour voir l'explication SHAP</p>
+                                    <p className="text-xs text-zinc-700 mt-1">Les facteurs en rouge augmentent le risque, en vert le réduisent</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Legend */}
+                        {explainability && (
+                            <div className="flex items-center justify-center gap-8 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-red-500"></div>
+                                    <span className="text-zinc-400">Augmente le risque de départ</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-emerald-500"></div>
+                                    <span className="text-zinc-400">Réduit le risque de départ</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
-
-                <div className="grid md:grid-cols-2 gap-12">
-                  {[
-                    { title: "Transparence Totale", desc: "Modèle explicable pour comprendre chaque prédiction." },
-                    { title: "Respect de la Vie Privée", desc: "Données anonymisées et traitement local uniquement." },
-                    { title: "Approche Humaine", desc: "L'IA assiste les RH, elle ne remplace pas l'humain." },
-                    { title: "Pas de Discrimination", desc: "Modèle entraîné pour éviter les biais et garantir l'équité." }
-                  ].map((item, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.1 }}
-                      className="flex gap-6 items-start group"
-                    >
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-emerald/10 flex items-center justify-center border border-emerald/20 group-hover:bg-emerald/20 transition-colors">
-                        <span className="text-xl">✅</span>
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold mb-2 text-emerald-light group-hover:text-emerald transition-colors">{item.title}</h3>
-                        <p className="text-light/60 group-hover:text-light/80 transition-colors">{item.desc}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-20 px-6 bg-dark-light/30 border-y border-white/5">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={staggerContainer}
-            className="grid md:grid-cols-4 gap-12 text-center"
-          >
-            {[
-              { val: "95%", label: "Précision du Modèle" },
-              { val: "29", label: "Features Analysées" },
-              { val: "<1s", label: "Temps de Prédiction" },
-              { val: "100%", label: "Éthique & Transparent" }
-            ].map((stat, i) => (
-              <motion.div key={i} variants={scaleIn} className="group cursor-default">
-                <div className="text-6xl font-bold bg-gradient-to-r from-emerald to-emerald-light bg-clip-text text-transparent mb-4 group-hover:scale-110 transition-transform duration-300 inline-block">
-                  {stat.val}
-                </div>
-                <p className="text-light/50 font-medium tracking-wide uppercase text-sm group-hover:text-light/80 transition-colors">{stat.label}</p>
-              </motion.div>
-            ))}
-          </motion.div>
+            </main>
         </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-32 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="max-w-4xl mx-auto text-center relative"
-        >
-          {/* Glow effect */}
-          <div className="absolute inset-0 bg-emerald/20 blur-[100px] rounded-full -z-10" />
-
-          <div className="p-12 border border-emerald/30 rounded-[2.5rem] bg-dark/50 backdrop-blur-xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-emerald/10 to-transparent opacity-50" />
-
-            <div className="relative z-10">
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">Prêt à Améliorer le Bien-être ?</h2>
-              <p className="text-light/70 text-xl mb-10 max-w-2xl mx-auto">
-                Rejoignez les entreprises qui utilisent l'IA éthique pour retenir leurs talents.
-              </p>
-              <Link
-                href="/prediction"
-                className="inline-block px-12 py-5 bg-gradient-to-r from-emerald to-emerald-dark rounded-full font-bold text-xl text-white shadow-xl shadow-emerald/30 hover:shadow-emerald/50 hover:-translate-y-1 hover:scale-105 transition-all duration-300"
-              >
-                🎯 Lancer une Prédiction
-              </Link>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-12 px-6 border-t border-emerald/10 bg-dark-light/20">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-light/40 mb-4 font-medium">© 2024 AttritionAI - IA Éthique pour le Bien-être au Travail</p>
-          <div className="flex justify-center gap-6 text-sm text-light/30">
-            <span className="hover:text-emerald cursor-pointer transition-colors">Mentions Légales</span>
-            <span className="hover:text-emerald cursor-pointer transition-colors">Confidentialité</span>
-            <span className="hover:text-emerald cursor-pointer transition-colors">Contact</span>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
+    );
 }

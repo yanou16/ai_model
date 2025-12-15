@@ -8,25 +8,15 @@ export default {
     ],
     theme: {
         extend: {
-            colors: {
-                // Palette Vert Émeraude / Noir - Éthique & Bien-être RH
-                emerald: {
-                    DEFAULT: '#009879',
-                    light: '#5DE6C1',
-                    dark: '#007A61',
-                },
-                dark: {
-                    DEFAULT: '#0C1D24',
-                    light: '#1A2F38',
-                },
-                light: {
-                    DEFAULT: '#F4F7F7',
-                    gray: '#E8ECEC',
-                },
-            },
             fontFamily: {
                 sans: ['Inter', 'system-ui', 'sans-serif'],
             },
+            colors: {
+                zinc: {
+                    850: '#1f1f23',
+                    950: '#09090b',
+                }
+            }
         },
     },
     plugins: [],
