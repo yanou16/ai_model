@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { usePrediction } from './context/PredictionContext';
 import Sidebar from './components/Sidebar';
+import RealTimeSimulator from './components/RealTimeSimulator';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line, CartesianGrid } from 'recharts';
 
 // Options
@@ -16,21 +17,37 @@ export default function Dashboard() {
     const [isLoading, setIsLoading] = useState(false);
     const [prediction, setPrediction] = useState<any>(null);
     const [explainability, setExplainability] = useState<any>(null);
-    
+    const [showAdvanced, setShowAdvanced] = useState(false);
+
     const [form, setForm] = useState({
-        Age: 35, Gender: 'Male', MaritalStatus: 'Single',
+        // Démographie
+        Age: 35, Gender: 'Male', MaritalStatus: 'Single', DistanceFromHome: 10,
+        // Éducation
+        Education: 3, EducationField: 'Life Sciences',
+        // Poste
         Department: 'Research & Development', JobRole: 'Research Scientist', JobLevel: 2,
-        MonthlyIncome: 5000, YearsAtCompany: 5, YearsWithCurrManager: 3,
-        TotalWorkingYears: 10, NumCompaniesWorked: 2, DistanceFromHome: 10,
-        BusinessTravel: 'Travel_Rarely', Education: 3, EducationField: 'Life Sciences',
+        MonthlyIncome: 5000, BusinessTravel: 'Travel_Rarely',
+        // Expérience
+        TotalWorkingYears: 10, YearsAtCompany: 5, YearsWithCurrManager: 3,
+        YearsSinceLastPromotion: 2, NumCompaniesWorked: 2,
+        // Satisfaction (1-4)
         JobSatisfaction: 3, EnvironmentSatisfaction: 3, WorkLifeBalance: 3,
-        JobInvolvement: 3, PerformanceRating: 3, PercentSalaryHike: 15,
-        StockOptionLevel: 1, TrainingTimesLastYear: 3, YearsSinceLastPromotion: 2,
+        JobInvolvement: 3, PerformanceRating: 3,
+        // Avantages
+        PercentSalaryHike: 15, StockOptionLevel: 1, TrainingTimesLastYear: 3,
+        // Données Temporelles (Avancées)
+        AvgWorkingHours: 8.5, LateArrivals: 10, AvgOvertime: 0.5,
+        AbsenceRate: 5.0, WorkHoursVariance: 1.0,
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        setForm(prev => ({ ...prev, [name]: type === 'number' ? parseFloat(value) : value }));
+        if (type === 'number') {
+            const numValue = parseFloat(value);
+            setForm(prev => ({ ...prev, [name]: isNaN(numValue) ? 0 : numValue }));
+        } else {
+            setForm(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -92,7 +109,7 @@ export default function Dashboard() {
                         <form onSubmit={handleSubmit} className="card space-y-5">
                             <div className="flex items-center justify-between border-b border-zinc-800 pb-4 -mx-5 px-5 -mt-5 pt-4">
                                 <h2 className="font-semibold text-white">Données Employé</h2>
-                                <span className="text-xs text-zinc-500">24 variables</span>
+                                <span className="text-xs text-zinc-500">31 variables</span>
                             </div>
 
                             {/* Demographics */}
@@ -125,37 +142,93 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
+                            {/* Education */}
+                            <div>
+                                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Éducation</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="label">Niveau (1-5)</label>
+                                        <select name="Education" value={form.Education} onChange={handleChange} className="select">
+                                            <option value={1}>1 - Inférieur Bac</option>
+                                            <option value={2}>2 - Bac</option>
+                                            <option value={3}>3 - Licence</option>
+                                            <option value={4}>4 - Master</option>
+                                            <option value={5}>5 - Doctorat</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Domaine</label>
+                                        <select name="EducationField" value={form.EducationField} onChange={handleChange} className="select">
+                                            {EDUCATION_FIELDS.map(f => <option key={f} value={f}>{f}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Job */}
                             <div>
                                 <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Poste</h3>
                                 <div className="space-y-3">
-                                    <div>
-                                        <label className="label">Département</label>
-                                        <select name="Department" value={form.Department} onChange={handleChange} className="select">
-                                            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                                        </select>
-                                    </div>
                                     <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="label">Département</label>
+                                            <select name="Department" value={form.Department} onChange={handleChange} className="select">
+                                                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="label">Rôle</label>
+                                            <select name="JobRole" value={form.JobRole} onChange={handleChange} className="select">
+                                                {JOB_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-3">
                                         <div>
                                             <label className="label">Niveau</label>
                                             <select name="JobLevel" value={form.JobLevel} onChange={handleChange} className="select">
-                                                {[1,2,3,4,5].map(l => <option key={l} value={l}>{l}</option>)}
+                                                {[1, 2, 3, 4, 5].map(l => <option key={l} value={l}>{l}</option>)}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="label">Salaire ($)</label>
                                             <input type="number" name="MonthlyIncome" value={form.MonthlyIncome} onChange={handleChange} className="input" />
                                         </div>
+                                        <div>
+                                            <label className="label">Voyages</label>
+                                            <select name="BusinessTravel" value={form.BusinessTravel} onChange={handleChange} className="select">
+                                                <option value="Non-Travel">Aucun</option>
+                                                <option value="Travel_Rarely">Rare</option>
+                                                <option value="Travel_Frequently">Fréquent</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="label">Ancienneté</label>
-                                            <input type="number" name="YearsAtCompany" value={form.YearsAtCompany} onChange={handleChange} className="input" />
-                                        </div>
-                                        <div>
-                                            <label className="label">Exp. Totale</label>
-                                            <input type="number" name="TotalWorkingYears" value={form.TotalWorkingYears} onChange={handleChange} className="input" />
-                                        </div>
+                                </div>
+                            </div>
+
+                            {/* Experience */}
+                            <div>
+                                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Expérience (années)</h3>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="label">Totale</label>
+                                        <input type="number" name="TotalWorkingYears" value={form.TotalWorkingYears} onChange={handleChange} className="input" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Entreprise</label>
+                                        <input type="number" name="YearsAtCompany" value={form.YearsAtCompany} onChange={handleChange} className="input" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Manager</label>
+                                        <input type="number" name="YearsWithCurrManager" value={form.YearsWithCurrManager} onChange={handleChange} className="input" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Depuis promo</label>
+                                        <input type="number" name="YearsSinceLastPromotion" value={form.YearsSinceLastPromotion} onChange={handleChange} className="input" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Nb Entreprises</label>
+                                        <input type="number" name="NumCompaniesWorked" value={form.NumCompaniesWorked} onChange={handleChange} className="input" />
                                     </div>
                                 </div>
                             </div>
@@ -163,36 +236,101 @@ export default function Dashboard() {
                             {/* Satisfaction */}
                             <div>
                                 <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Satisfaction (1-4)</h3>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-3 gap-3">
                                     <div>
                                         <label className="label">Job</label>
                                         <select name="JobSatisfaction" value={form.JobSatisfaction} onChange={handleChange} className="select">
-                                            {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                                            {[1, 2, 3, 4].map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="label">Environnement</label>
                                         <select name="EnvironmentSatisfaction" value={form.EnvironmentSatisfaction} onChange={handleChange} className="select">
-                                            {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                                            {[1, 2, 3, 4].map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="label">Équilibre</label>
                                         <select name="WorkLifeBalance" value={form.WorkLifeBalance} onChange={handleChange} className="select">
-                                            {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                                            {[1, 2, 3, 4].map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Implication</label>
+                                        <select name="JobInvolvement" value={form.JobInvolvement} onChange={handleChange} className="select">
+                                            {[1, 2, 3, 4].map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="label">Performance</label>
                                         <select name="PerformanceRating" value={form.PerformanceRating} onChange={handleChange} className="select">
-                                            {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                                            {[3, 4].map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            <button 
-                                type="submit" 
+                            {/* Benefits */}
+                            <div>
+                                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Avantages</h3>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="label">Augmentation %</label>
+                                        <input type="number" name="PercentSalaryHike" value={form.PercentSalaryHike} onChange={handleChange} className="input" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Stock (0-3)</label>
+                                        <select name="StockOptionLevel" value={form.StockOptionLevel} onChange={handleChange} className="select">
+                                            {[0, 1, 2, 3].map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Formations</label>
+                                        <input type="number" name="TrainingTimesLastYear" value={form.TrainingTimesLastYear} onChange={handleChange} className="input" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Advanced - Temporal Data (Collapsible) */}
+                            <div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAdvanced(!showAdvanced)}
+                                    className="flex items-center gap-2 text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3 hover:text-zinc-300 transition-colors"
+                                >
+                                    <svg className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                    Données Temporelles (Avancé)
+                                </button>
+                                {showAdvanced && (
+                                    <div className="grid grid-cols-2 gap-3 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800">
+                                        <div>
+                                            <label className="label">Heures/jour moy.</label>
+                                            <input type="number" step="0.1" name="AvgWorkingHours" value={form.AvgWorkingHours} onChange={handleChange} className="input" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Retards</label>
+                                            <input type="number" name="LateArrivals" value={form.LateArrivals} onChange={handleChange} className="input" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Heures sup moy.</label>
+                                            <input type="number" step="0.1" name="AvgOvertime" value={form.AvgOvertime} onChange={handleChange} className="input" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Absence %</label>
+                                            <input type="number" step="0.1" name="AbsenceRate" value={form.AbsenceRate} onChange={handleChange} className="input" />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="label">Variance heures</label>
+                                            <input type="number" step="0.1" name="WorkHoursVariance" value={form.WorkHoursVariance} onChange={handleChange} className="input" />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                type="submit"
                                 disabled={isLoading}
                                 className="w-full btn btn-primary flex items-center justify-center gap-2"
                             >
@@ -280,7 +418,7 @@ export default function Dashboard() {
                                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                                     ))}
                                                 </Pie>
-                                                <Tooltip 
+                                                <Tooltip
                                                     contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px' }}
                                                     labelStyle={{ color: '#fff' }}
                                                 />
@@ -304,14 +442,14 @@ export default function Dashboard() {
                                         <div className="relative">
                                             <svg width="160" height="160" className="-rotate-90">
                                                 <circle cx="80" cy="80" r="70" stroke="#3f3f46" strokeWidth="12" fill="none" />
-                                                <circle 
-                                                    cx="80" cy="80" r="70" 
+                                                <circle
+                                                    cx="80" cy="80" r="70"
                                                     stroke={riskScore > 50 ? '#ef4444' : riskScore > 30 ? '#eab308' : '#22c55e'}
-                                                    strokeWidth="12" 
+                                                    strokeWidth="12"
                                                     fill="none"
                                                     strokeLinecap="round"
                                                     strokeDasharray={`${(riskScore / 100) * 440} 440`}
-                                                    style={{ 
+                                                    style={{
                                                         transition: 'stroke-dasharray 1s ease',
                                                         filter: `drop-shadow(0 0 8px ${riskScore > 50 ? '#ef4444' : riskScore > 30 ? '#eab308' : '#22c55e'})`
                                                     }}
@@ -350,10 +488,10 @@ export default function Dashboard() {
                                         <BarChart data={shapData} layout="vertical" margin={{ left: 100 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" horizontal={false} />
                                             <XAxis type="number" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={{ stroke: '#3f3f46' }} />
-                                            <YAxis 
-                                                dataKey="name" 
-                                                type="category" 
-                                                tick={{ fill: '#a1a1aa', fontSize: 12 }} 
+                                            <YAxis
+                                                dataKey="name"
+                                                type="category"
+                                                tick={{ fill: '#a1a1aa', fontSize: 12 }}
                                                 axisLine={{ stroke: '#3f3f46' }}
                                                 width={100}
                                             />
@@ -399,6 +537,11 @@ export default function Dashboard() {
                                 </div>
                             </div>
                         )}
+                    </div>
+
+                    {/* Real-Time Simulator */}
+                    <div className="col-span-12">
+                        <RealTimeSimulator />
                     </div>
                 </div>
             </main>

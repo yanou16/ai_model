@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏢 HumanForYou - Dashboard de Prédiction d'Attrition
 
-## Getting Started
+Interface web pour le modèle de prédiction d'attrition des employés de l'entreprise HumanForYou.
 
-First, run the development server:
+## 🚀 Démarrage
+
+Lancer le serveur de développement :
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrir [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📋 Fonctionnalités
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Formulaire de prédiction** : Saisie des 31 variables employé
+- **Analyse de risque** : Probabilité de départ avec niveau (Faible/Moyen/Élevé)
+- **Explainability SHAP** : Visualisation des facteurs influençant la prédiction
+- **Simulateur temps réel** : Sliders pour tester différents scénarios instantanément
+- **Chatbot RH** : Assistant IA pour questionner les résultats
 
-## Learn More
+## 🛠️ Technologies
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework** : Next.js 15 (React)
+- **Styling** : Tailwind CSS
+- **Graphiques** : Recharts
+- **API Backend** : Flask (Python)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+frontend/
+├── app/
+│   ├── page.tsx          # Dashboard principal
+│   ├── components/       # Composants réutilisables
+│   │   ├── Sidebar.tsx
+│   │   └── RealTimeSimulator.tsx
+│   └── context/          # État global React
+│       └── PredictionContext.tsx
+└── public/               # Assets statiques
+```
 
-## Deploy on Vercel
+## 🔗 API Backend
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+L'interface communique avec l'API Flask sur `http://localhost:5000` :
+- `POST /predict` : Prédiction d'attrition
+- `POST /chat` : Assistant RH
+- `GET /health` : Status de l'API
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+*Projet IA - PGE A3 FISE INFO - Intelligence Artificielle*

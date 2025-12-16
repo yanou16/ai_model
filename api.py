@@ -82,7 +82,7 @@ def load_model():
     time_str = time.ctime(mod_time)
     print(f"✅ Modèle chargé avec succès!")
     print(f"📅 Timestamp du modèle: {time_str}")
-    print(f"☢️  VERSION: NUCLEAR (GradientBoosting)")
+    print(f"🌲 VERSION: Random Forest (anti-overfitting)")
     return True
 
 @app.route('/health', methods=['GET'])
@@ -164,21 +164,35 @@ def predict():
         proba_no = float(proba[0] * 100)
         proba_yes = float(proba[1] * 100)
         
-        risk_level = 'low'
-        if prediction == 1:
-            if proba_yes > 70: risk_level = 'high'
-            elif proba_yes > 50: risk_level = 'medium'
+        # Seuils adaptés pour Random Forest (probabilités compressées)
+        # > 40% = high, 25-40% = medium, < 25% = low
+        if proba_yes > 40:
+            risk_level = 'high'
+        elif proba_yes > 25:
+            risk_level = 'medium'
+        else:
+            risk_level = 'low'
         
-        recommendations = []
-        if prediction == 1:
+        # Recommandations basées sur le niveau de risque
+        if risk_level == 'high':
             recommendations = [
-                "Organiser un entretien individuel",
-                "Évaluer les opportunités de promotion",
+                "⚠️ URGENT: Organiser un entretien individuel immédiat",
+                "Évaluer les opportunités de promotion ou changement de poste",
+                "Revoir la charge de travail et les heures supplémentaires",
+                "Proposer un ajustement salarial si justifié"
+            ]
+        elif risk_level == 'medium':
+            recommendations = [
+                "Planifier un point régulier avec le manager",
                 "Améliorer l'équilibre vie pro/perso",
-                "Proposer des formations supplémentaires"
+                "Proposer des formations de développement",
+                "Évaluer la satisfaction environnementale"
             ]
         else:
-            recommendations = ["Employé satisfait - Continuer le bon travail!"]
+            recommendations = [
+                "Employé à faible risque - Maintenir les bonnes conditions",
+                "Continuer le suivi régulier"
+            ]
 
         # 4. SHAP Explanation
         explanation_data = None
@@ -276,12 +290,20 @@ def chat():
     """
 
     if prediction_result:
-        probabilities = prediction_result.get('probabilities', {})
-        risk_level = prediction_result.get('risk_level', 'inconnu')
+        # Handle both dict and float formats
+        if isinstance(prediction_result, dict):
+            probabilities = prediction_result.get('probabilities', {})
+            risk_level = prediction_result.get('risk_level', 'inconnu')
+            leave_prob = probabilities.get('leave', 0)
+        else:
+            # prediction_result is just the leave probability as a float
+            leave_prob = prediction_result
+            risk_level = 'élevé' if leave_prob > 50 else ('moyen' if leave_prob > 30 else 'faible')
+        
         employee_context += f"""
     RÉSULTAT DE LA PRÉDICTION ACTUELLE :
     - Risque d'Attrition : {risk_level.upper()}
-    - Probabilité de Départ : {probabilities.get('leave', 0)}%
+    - Probabilité de Départ : {leave_prob}%
     
     Utilise ces pourcentages pour justifier tes conseils.
     """

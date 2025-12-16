@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from imblearn.pipeline import Pipeline
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 def extract_time_features():
@@ -151,14 +151,17 @@ def train_model(df):
         ]
     )
     
-    # Pipeline avec GradientBoosting
+    # Pipeline avec Random Forest (meilleur selon notebook, évite overfitting)
     model = Pipeline([
         ('preprocessor', preprocessor),
-        ('classifier', GradientBoostingClassifier(
-            n_estimators=300,
-            learning_rate=0.1,
-            max_depth=5,
-            random_state=42
+        ('classifier', RandomForestClassifier(
+            n_estimators=200,
+            max_depth=10,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            class_weight='balanced',  # Gère le déséquilibre des classes
+            random_state=42,
+            n_jobs=-1  # Utilise tous les CPU
         ))
     ])
     
