@@ -6,6 +6,9 @@ import Sidebar from './components/Sidebar';
 import RealTimeSimulator from './components/RealTimeSimulator';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line, CartesianGrid } from 'recharts';
 
+// API Configuration
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 // Options
 const DEPARTMENTS = ['Sales', 'Research & Development', 'Human Resources'];
 const JOB_ROLES = ['Sales Executive', 'Research Scientist', 'Laboratory Technician', 'Manufacturing Director', 'Healthcare Representative', 'Manager', 'Sales Representative', 'Research Director', 'Human Resources'];
@@ -54,7 +57,7 @@ export default function Dashboard() {
         e.preventDefault();
         setIsLoading(true);
         try {
-            const response = await fetch('http://localhost:5000/predict', {
+            const response = await fetch(`${API_URL}/predict`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(form),

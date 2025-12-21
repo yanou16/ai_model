@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePrediction } from '../context/PredictionContext';
 
+// API Configuration
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 // Debounce hook pour éviter trop de requêtes
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -81,7 +84,7 @@ export default function RealTimeSimulator() {
                     TrainingTimesLastYear: formData.TrainingTimesLastYear || 3,
                 };
 
-                const response = await fetch('http://localhost:5000/predict', {
+                const response = await fetch(`${API_URL}/predict`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(fullData),

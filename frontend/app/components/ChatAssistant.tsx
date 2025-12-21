@@ -3,6 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePrediction } from '../context/PredictionContext';
 
+// API Configuration
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface Message {
     role: 'system' | 'user' | 'assistant';
     content: string;
@@ -37,7 +40,7 @@ export default function ChatAssistant() {
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5000/chat', {
+            const response = await fetch(`${API_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -84,11 +87,10 @@ export default function ChatAssistant() {
                     <div className="flex-1 overflow-y-auto p-3 space-y-3">
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
-                                    msg.role === 'user'
+                                <div className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${msg.role === 'user'
                                         ? 'bg-indigo-600 text-white'
                                         : 'bg-zinc-800 text-zinc-200'
-                                }`}>
+                                    }`}>
                                     {msg.content}
                                 </div>
                             </div>
